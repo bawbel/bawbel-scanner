@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+
+  # ── bawbel-scanner ────────────────────────────────────────────────────────
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: bawbel/scanner:0.1.0
+    container_name: bawbel-scanner
+    volumes:
+      # Mount the directory you want to scan
+      # Change ./scan to any local path
+      - ./scan:/scan:ro
+    command: ["scan", "/scan", "--recursive", "--format", "text"]
+    environment:
+      # Optional: enable LLM semantic analysis (Stage 2)
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Optional: fail CI on severity threshold
+      # BAWBEL_FAIL_ON_SEVERITY: high
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+  # ── bawbel-scanner-json ───────────────────────────────────────────────────
+  # Outputs JSON — useful for piping into SIEM or CI/CD
+  scanner-json:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: bawbel/scanner:0.1.0
+    container_name: bawbel-scanner-json
+    volumes:
+      - ./scan:/scan:ro
+    command: ["scan", "/scan", "--recursive", "--format", "json"]
+    profiles:
+      - json
