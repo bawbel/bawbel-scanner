@@ -51,7 +51,10 @@ def print_result(result: ScanResult):
     console.print()
 
     if result.error:
-        console.print(f"[bold red]Error:[/] {result.error}")
+        # Show error code and message — but not internal paths or stack traces
+        # Full detail is in logs (BAWBEL_LOG_LEVEL=DEBUG for diagnostics)
+        console.print(f"[bold red]✗  Scan error:[/] {result.error}")
+        console.print("[dim]For diagnostics: set BAWBEL_LOG_LEVEL=DEBUG[/]")
         return
 
     if result.is_clean:
@@ -69,13 +72,12 @@ def print_result(result: ScanResult):
         console.print("[dim]" + "─" * 58 + "[/]")
 
         for f in result.findings:
-            color = SEVERITY_COLORS.get(f.severity, "white")
-            icon  = SEVERITY_ICONS.get(f.severity, "•")
+            sev_val = f.severity.value if hasattr(f.severity, "value") else str(f.severity)
+            color   = SEVERITY_COLORS.get(sev_val, "white")
+            icon    = SEVERITY_ICONS.get(sev_val, "•")
 
-            sev_text = Text(f"[{f.severity}]", style=color)
-            ave_text = f"  {f.ave_id}" if f.ave_id else ""
             console.print(
-                f"{icon}  [{color}]{f.severity:8}[/]  "
+                f"{icon}  [{color}]{sev_val:8}[/]  "
                 f"[bold]{f.ave_id or 'N/A':18}[/]  "
                 f"[white]{f.title}[/]"
             )
@@ -94,9 +96,9 @@ def print_result(result: ScanResult):
     max_sev    = result.max_severity
 
     if max_sev:
-        color = SEVERITY_COLORS.get(max_sev, "white")
+        color = SEVERITY_COLORS.get(max_sev.value if hasattr(max_sev, "value") else str(max_sev), "white")
         console.print(
-            f"Risk score:   [{color}]{risk_score:.1f} / 10  {max_sev}[/]"
+            f"Risk score:   [{color}]{risk_score:.1f} / 10  {max_sev.value if hasattr(max_sev, 'value') else max_sev}[/]"
         )
     else:
         console.print("Risk score:   [bold #1DB894]0.0 / 10  CLEAN[/]")
@@ -179,24 +181,26 @@ def scan_cmd(path, fmt, fail_on_severity, recursive):
                 "file_path":      r.file_path,
                 "component_type": r.component_type,
                 "risk_score":     r.risk_score,
-                "max_severity":   r.max_severity,
+                "max_severity":   r.max_severity.value if r.max_severity else None,
                 "scan_time_ms":   r.scan_time_ms,
+                # Include error flag but not full message — may contain paths
+                "has_error":      r.error is not None,
                 "findings": [
                     {
-                        "rule_id":     f.rule_id,
-                        "ave_id":      f.ave_id,
-                        "title":       f.title,
-                        "severity":    f.severity,
-                        "cvss_ai":     f.cvss_ai,
-                        "line":        f.line,
-                        "match":       f.match,
-                        "engine":      f.engine,
-                        "owasp":       f.owasp,
+                        "rule_id":  f.rule_id,
+                        "ave_id":   f.ave_id,
+                        "title":    f.title,
+                        "severity": f.severity.value if hasattr(f.severity, "value") else f.severity,
+                        "cvss_ai":  f.cvss_ai,
+                        "line":     f.line,
+                        "match":    f.match,
+                        "engine":   f.engine,
+                        "owasp":    f.owasp,
                     }
                     for f in r.findings
                 ],
             })
-        print(_json.dumps(output, indent=2))
+        print(_json.dumps(output, indent=2, default=str))
 
     # Exit codes
     if fail_on_severity:

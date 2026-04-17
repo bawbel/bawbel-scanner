@@ -83,3 +83,34 @@ logs/
 # Uncomment if you don't want to commit test skill files
 # tests/local/
 scan/
+
+# ── Private context files — never commit these ────────────────────────────────
+# These contain business strategy, roadmap, and founder context.
+# Keep them local only. Share via secure channel if needed.
+PROJECT_CONTEXT.md
+.claude/settings.json
+
+# ── Docs build output — never commit generated docs ───────────────────────────
+docs/_build/
+docs/site/
+site/
+
+# ── Config overrides — local developer overrides ──────────────────────────────
+config/local.py
+config/local_*.py
+bawbel.local.yml
+
+# ── Local scan results — never commit scan outputs ────────────────────────────
+bawbel-results.*
+abom.json
+*.sarif
+scan-results/
+
+# ── IDE and editor artifacts ──────────────────────────────────────────────────
+.cursor/
+.cursorignore
+*.cursor-tutor
+
+# ── Local scripts (dev shortcuts, never for production) ───────────────────────
+scripts/local_*.sh
+scripts/dev_*.sh
