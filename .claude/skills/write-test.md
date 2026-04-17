@@ -19,7 +19,7 @@ from scanner.scanner import scan, _deduplicate as deduplicate
 from scanner.models import Finding, ScanResult, Severity, SEVERITY_SCORES
 from scanner.engines.pattern import run_pattern_scan
 from config import MAX_MATCH_LENGTH
-from cli import cli
+from scanner.cli import cli
 from click.testing import CliRunner
 from pathlib import Path
 

@@ -78,7 +78,7 @@ Code quality
 [ ] No hardcoded secrets or API keys
 
 Tests
-[ ] python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md → still 2 findings, CRITICAL 9.4
+[ ] bawbel scan tests/fixtures/skills/malicious/malicious_skill.md → still 2 findings, CRITICAL 9.4
 [ ] New rules have positive and negative fixture tests
 [ ] python -m pytest tests/ -v passes
 
@@ -179,7 +179,7 @@ pip freeze > requirements.txt
 python -m pytest tests/ -v
 
 # Run golden fixture
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 ```
 
 Never bulk-update all dependencies in one commit.

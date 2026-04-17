@@ -102,8 +102,6 @@ bawbel.local.yml
 
 # ── Local scan results — never commit scan outputs ────────────────────────────
 bawbel-results.*
-abom.json
-*.sarif
 scan-results/
 
 # ── IDE and editor artifacts ──────────────────────────────────────────────────
@@ -114,3 +112,5 @@ scan-results/
 # ── Local scripts (dev shortcuts, never for production) ───────────────────────
 scripts/local_*.sh
 scripts/dev_*.sh
+
+# ── Build artifacts — never commit ───────────────────────────────────────────

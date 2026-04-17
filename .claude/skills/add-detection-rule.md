@@ -86,7 +86,7 @@ def test_<rule_id>_no_false_positive(self, tmp_path):
 
 ```bash
 python -m pytest tests/ -q                 # all pass
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 # must still be: 2 findings, CRITICAL 9.4
 ```
 

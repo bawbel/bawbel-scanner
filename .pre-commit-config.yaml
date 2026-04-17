@@ -19,7 +19,7 @@ repos:
     rev: 24.4.2
     hooks:
       - id: black
-        language_version: python3.12
+        language_version: python3.10
         args: ["--line-length=100"]
 
   # ── Linting ────────────────────────────────────────────────────────────────
@@ -32,6 +32,7 @@ repos:
           - flake8-bugbear
           - flake8-bandit
           - flake8-simplify
+          - flake8-pyproject
 
   # ── Security checks ────────────────────────────────────────────────────────
   - repo: https://github.com/PyCQA/bandit
@@ -53,10 +54,10 @@ repos:
     hooks:
       - id: bawbel-self-scan
         name: Bawbel self-scan
-        entry: python cli.py scan
+        entry: bawbel scan docs/ --recursive
         language: python
-        pass_filenames: true
-        types: [markdown]
+        pass_filenames: false
+        always_run: true
         additional_dependencies: ["click", "rich"]
 
       # ── Run tests before every commit ──────────────────────────────────────
@@ -66,4 +67,4 @@ repos:
         language: python
         pass_filenames: false
         always_run: true
-        additional_dependencies: ["pytest", "pytest-cov"]
+        additional_dependencies: ["pytest", "pytest-cov", "click", "rich"]

@@ -14,18 +14,19 @@ vulnerabilities mapped to the [AVE standard](https://github.com/bawbel/bawbel-av
 
 | Document | Description |
 |---|---|
-| [Getting Started](guides/getting-started.md) | Install, run your first scan, understand output |
+| [Getting Started](guides/getting-started.md) | Install, all commands, output formats, detection coverage |
 | [Configuration](guides/configuration.md) | Environment variables, config options |
 | [CI/CD Integration](guides/cicd-integration.md) | GitHub Actions, GitLab, Jenkins, CircleCI |
 | [Docker](guides/docker.md) | Running via Docker and Docker Compose |
-| [Writing Rules](guides/writing-rules.md) | Add YARA and Semgrep detection rules |
+| [Publishing](guides/publishing.md) | Publish to PyPI — step by step |
+| [Writing Rules](guides/writing-rules.md) | All 15 built-in rules, OWASP mapping, adding new rules |
 | [Adding an Engine](guides/adding-engine.md) | Add a new detection stage |
 
 ### API Reference — for contributors
 
 | Document | Description |
 |---|---|
-| [scan()](api/scan.md) | Main public API |
+| [scan()](api/scan.md) | Python API + all CLI commands (scan, report, version) + output formats |
 | [Finding](api/finding.md) | Finding dataclass |
 | [ScanResult](api/scan-result.md) | ScanResult dataclass |
 | [Engines](api/engines.md) | Engine interface contract |
@@ -49,17 +50,25 @@ vulnerabilities mapped to the [AVE standard](https://github.com/bawbel/bawbel-av
 # Install
 pip install bawbel-scanner
 
+# Check version and active engines
+bawbel version
+bawbel --version
+
 # Scan a file
 bawbel scan ./my-skill.md
 
-# Scan a directory
+# Scan a directory recursively
 bawbel scan ./skills/ --recursive
+
+# Full remediation report
+bawbel report ./my-skill.md
 
 # Fail CI on high severity
 bawbel scan ./skills/ --fail-on-severity high
 
-# JSON output for SIEM
-bawbel scan ./skills/ --format json
+# Output formats
+bawbel scan ./skills/ --format json           # JSON for SIEM / tooling
+bawbel scan ./skills/ --format sarif          # SARIF for GitHub Security tab
 
 # Enable debug logging
 BAWBEL_LOG_LEVEL=DEBUG bawbel scan ./my-skill.md

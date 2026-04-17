@@ -296,7 +296,7 @@ pip install "package>=new.version"
 pip freeze > requirements.txt
 
 # 4. Run golden fixture
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md   # must be: 2 findings, CRITICAL 9.4
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md   # must be: 2 findings, CRITICAL 9.4
 
 # 5. Run full test suite
 python -m pytest tests/ -v                    # must be 45/45

@@ -67,7 +67,6 @@ bawbel-scanner/
 │       └── mcp/                     ← MCP manifest fixtures
 │
 ├── scripts/
-│   └── setup.sh                     ← One-command local setup
 │
 ├── cli.py                           ← CLI entry point (Click + Rich)
 ├── Dockerfile
@@ -174,7 +173,7 @@ ALWAYS handle both ImportError and Exception → optional deps may fail in two w
 
 ### Testing
 ```
-ALWAYS run golden fixture after any change   → python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+ALWAYS run golden fixture after any change   → bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 ALWAYS add positive + negative test          → new rule needs both fixture types
 ALWAYS run 45/45 before committing           → python -m pytest tests/ -v
 ALWAYS activate venv before any command      → source .venv/bin/activate
@@ -243,9 +242,9 @@ return None, Errors.SEMGREP_PARSE_FAILED                      # E012 to user
 
 ```bash
 # Control log level
-BAWBEL_LOG_LEVEL=DEBUG python cli.py scan ./skill.md    # verbose
-BAWBEL_LOG_LEVEL=INFO  python cli.py scan ./skill.md    # lifecycle only
-BAWBEL_LOG_LEVEL=WARNING python cli.py scan ./skill.md  # silent (default)
+BAWBEL_LOG_LEVEL=DEBUG bawbel scan ./skill.md    # verbose
+BAWBEL_LOG_LEVEL=INFO  bawbel scan ./skill.md    # lifecycle only
+BAWBEL_LOG_LEVEL=WARNING bawbel scan ./skill.md  # silent (default)
 ```
 
 ---
@@ -302,11 +301,11 @@ Info.REPORT_COMING_SOON      # "Full A-BOM report generation coming in v0.2.0"
 
 ```bash
 # Setup (first time)
-./setup.sh && source .venv/bin/activate
+./scripts/setup.sh && source .venv/bin/activate
 
 # Scan
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md      # expected: 2 findings, CRITICAL 9.4
-python cli.py scan ./skills/ --recursive --format json
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md      # expected: 2 findings, CRITICAL 9.4
+bawbel scan ./skills/ --recursive --format json
 
 # Test
 python -m pytest tests/ -v                        # must be 45/45

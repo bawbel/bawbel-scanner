@@ -109,7 +109,7 @@ def test_scan_time_is_reasonable(tmp_path):
 
 ```python
 from click.testing import CliRunner
-from cli import cli
+from scanner.cli import cli
 
 def test_cli_scan_malicious():
     runner = CliRunner()
@@ -151,7 +151,7 @@ python -m pytest tests/test_scanner.py -v
 python -m pytest tests/test_scanner.py::test_ave_00001_metamorphic_payload -v
 
 # Run golden fixture check
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 ```
 
 ---

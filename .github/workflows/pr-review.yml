@@ -50,7 +50,7 @@ jobs:
         run: |
           python3 -c "
           from scanner.scanner import scan, Severity
-          result = scan('tests/malicious_skill.md')
+          result = scan('tests/fixtures/skills/malicious/malicious_skill.md')
 
           errors = []
           if len(result.findings) != 2:

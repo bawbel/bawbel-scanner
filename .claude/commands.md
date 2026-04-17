@@ -8,7 +8,7 @@ Quick reference for every command you will need during development.
 
 ```bash
 # First time setup — creates venv, installs all deps
-./setup.sh
+./scripts/setup.sh
 
 # Activate venv (do this every session)
 source .venv/bin/activate
@@ -26,23 +26,23 @@ pip install package-name && pip freeze > requirements.txt
 
 ```bash
 # Scan a single file (text output)
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 
 # Scan a single file (JSON output)
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md --format json
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md --format json
 
 # Scan a directory recursively
-python cli.py scan ./skills/ --recursive
+bawbel scan ./skills/ --recursive
 
 # Scan and fail CI on HIGH or above
-python cli.py scan ./skills/ --recursive --fail-on-severity high
+bawbel scan ./skills/ --recursive --fail-on-severity high
 
 # Generate report
-python cli.py report tests/fixtures/skills/malicious/malicious_skill.md
+bawbel report tests/fixtures/skills/malicious/malicious_skill.md
 
 # Show help
-python cli.py --help
-python cli.py scan --help
+bawbel --help
+bawbel scan --help
 ```
 
 ---
@@ -66,7 +66,7 @@ python -m pytest tests/test_scanner.py -v
 python -m pytest tests/test_scanner.py::test_ave_00001_metamorphic_payload -v
 
 # Run golden fixture check (must always show 2 findings, CRITICAL 9.4)
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 ```
 
 ---
@@ -75,11 +75,11 @@ python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
 
 ```bash
 # Lint (must pass before every PR)
-flake8 scanner/ cli.py --max-line-length 100
+flake8 scanner/ --max-line-length 100
 
 # Format with black (optional but recommended)
 pip install black
-black scanner/ cli.py
+black scanner/
 
 # Type check with mypy (optional)
 pip install mypy

@@ -129,7 +129,7 @@ def test_<n>_handles_engine_error(self, tmp_path, monkeypatch): ...    # runtime
 
 ```bash
 python -m pytest tests/ -q
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 # must still be: 2 findings, CRITICAL 9.4
 bandit -r scanner/ cli.py config/ -f screen   # 0 issues
 git commit -m "feat(scanner): add <n> detection engine (Stage X)"

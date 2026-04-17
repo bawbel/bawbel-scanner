@@ -22,7 +22,7 @@ source .venv/bin/activate
 bandit -r scanner/ cli.py config/ -f screen   # must be: 0 High, 0 Medium, 0 Low
 pip-audit -r requirements.txt                 # must be: No known vulnerabilities
 python -m pytest tests/ -q                    # must be: all pass
-python cli.py scan tests/fixtures/skills/malicious/malicious_skill.md
+bawbel scan tests/fixtures/skills/malicious/malicious_skill.md
 # must be: 2 findings, Risk 9.4, CRITICAL
 ```
 
