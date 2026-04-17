@@ -15,7 +15,7 @@ Breaking changes (removing/renaming public API) require a major version bump.
 """
 
 __version__ = "0.1.0"
-__author__  = "Bawbel <bawbel.io@gmail.com>"
+__author__ = "Bawbel <bawbel.io@gmail.com>"
 __license__ = "Apache-2.0"
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -24,19 +24,17 @@ __license__ = "Apache-2.0"
 # Sub-module paths (scanner.scanner, scanner.models.finding) are internal
 # and may change without notice.
 
-from scanner.scanner import scan                          # main entry point
-from scanner.models  import Finding, ScanResult, Severity, SEVERITY_SCORES
+from scanner.scanner import scan  # main entry point
+from scanner.models import Finding, ScanResult, Severity, SEVERITY_SCORES
 
 __all__ = [
     # Core function
     "scan",
-
     # Data models
     "Finding",
     "ScanResult",
     "Severity",
     "SEVERITY_SCORES",
-
     # Package metadata
     "__version__",
     "__author__",

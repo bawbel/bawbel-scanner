@@ -24,15 +24,15 @@ Usage (direct class):
 import json
 import logging
 import os
-import subprocess  # nosec B404
+import subprocess  # nosec B404  # noqa: S404
 import time
 from pathlib import Path
 from typing import Optional
 
 from scanner.messages import Errors, Logs
 
-
 # ── Logger ────────────────────────────────────────────────────────────────────
+
 
 class Logger:
     """
@@ -53,9 +53,9 @@ class Logger:
         log.error("failed: type=%s", type(e).__name__)  # ERROR — type only
     """
 
-    FORMAT   = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     DATE_FMT = "%Y-%m-%dT%H:%M:%S"
-    _LEVEL   = os.environ.get("BAWBEL_LOG_LEVEL", "WARNING").upper()
+    _LEVEL = os.environ.get("BAWBEL_LOG_LEVEL", "WARNING").upper()
 
     @classmethod
     def get(cls, name: str) -> logging.Logger:
@@ -72,9 +72,7 @@ class Logger:
 
         if not logger.handlers:
             handler = logging.StreamHandler()
-            handler.setFormatter(
-                logging.Formatter(cls.FORMAT, datefmt=cls.DATE_FMT)
-            )
+            handler.setFormatter(logging.Formatter(cls.FORMAT, datefmt=cls.DATE_FMT))
             logger.addHandler(handler)
 
         try:
@@ -86,6 +84,7 @@ class Logger:
 
 
 # ── PathValidator ─────────────────────────────────────────────────────────────
+
 
 class PathValidator:
     """
@@ -119,9 +118,7 @@ class PathValidator:
         try:
             raw = Path(file_path)
         except Exception as e:
-            cls._log.warning(
-                "invalid path input: error_type=%s", type(e).__name__
-            )
+            cls._log.warning("invalid path input: error_type=%s", type(e).__name__)
             return None, Errors.INVALID_PATH
 
         # Symlink check BEFORE resolve()
@@ -132,9 +129,7 @@ class PathValidator:
         try:
             resolved = raw.resolve()
         except Exception as e:
-            cls._log.warning(
-                "path resolve failed: error_type=%s", type(e).__name__
-            )
+            cls._log.warning("path resolve failed: error_type=%s", type(e).__name__)
             return None, Errors.PATH_RESOLVE_FAILED
 
         return resolved, None
@@ -172,14 +167,15 @@ class PathValidator:
 
         if size > MAX_FILE_SIZE_BYTES:
             return False, Errors.FILE_TOO_LARGE.format(
-                size_kb = size // 1024,
-                max_mb  = MAX_FILE_SIZE_BYTES // 1024 // 1024,
+                size_kb=size // 1024,
+                max_mb=MAX_FILE_SIZE_BYTES // 1024 // 1024,
             )
 
         return True, None
 
 
 # ── FileReader ────────────────────────────────────────────────────────────────
+
 
 class FileReader:
     """
@@ -221,6 +217,7 @@ class FileReader:
 
 # ── SubprocessRunner ──────────────────────────────────────────────────────────
 
+
 class SubprocessRunner:
     """
     Safe external tool execution via subprocess.
@@ -258,53 +255,52 @@ class SubprocessRunner:
         start = time.time()
 
         try:
-            result = subprocess.run(  # nosec B603 B607
+            result = subprocess.run(  # nosec B603 B607  # noqa: S603
                 args,
-                capture_output = True,
-                text           = True,
-                timeout        = timeout,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
             )
             elapsed = int((time.time() - start) * 1000)
 
             cls._log.debug(
                 "complete: label=%s exit_code=%d time_ms=%d",
-                label, result.returncode, elapsed,
+                label,
+                result.returncode,
+                elapsed,
             )
 
             if result.returncode not in (0, 1):
                 cls._log.warning(
                     "non-zero exit: label=%s code=%d",
-                    label, result.returncode,
+                    label,
+                    result.returncode,
                 )
                 if result.stderr:
                     # Stderr may contain internal paths — DEBUG only
                     cls._log.debug(
                         "stderr: label=%s content=%s",
-                        label, result.stderr[:100],
+                        label,
+                        result.stderr[:100],
                     )
 
             return result.stdout or "", None
 
         except subprocess.TimeoutExpired:
-            cls._log.error(
-                "timeout: label=%s timeout_sec=%d", label, timeout
-            )
+            cls._log.error("timeout: label=%s timeout_sec=%d", label, timeout)
             return None, Errors.SEMGREP_TIMEOUT.format(timeout=timeout)
 
         except FileNotFoundError:
-            cls._log.info(
-                "tool not found: label=%s cmd=%s", label, args[0] if args else ""
-            )
+            cls._log.info("tool not found: label=%s cmd=%s", label, args[0] if args else "")
             return None, None  # not installed — skip silently
 
         except Exception as e:  # nosec B110
-            cls._log.error(
-                "error: label=%s error_type=%s", label, type(e).__name__
-            )
+            cls._log.error("error: label=%s error_type=%s", label, type(e).__name__)
             return None, Errors.YARA_SCAN_FAILED
 
 
 # ── JsonParser ────────────────────────────────────────────────────────────────
+
 
 class JsonParser:
     """
@@ -338,18 +334,15 @@ class JsonParser:
         try:
             return json.loads(raw), None
         except json.JSONDecodeError as e:
-            cls._log.warning(
-                "parse failed: label=%s error_type=%s", label, type(e).__name__
-            )
+            cls._log.warning("parse failed: label=%s error_type=%s", label, type(e).__name__)
             return None, Errors.SEMGREP_PARSE_FAILED
         except Exception as e:  # nosec B110
-            cls._log.error(
-                "unexpected error: label=%s error_type=%s", label, type(e).__name__
-            )
+            cls._log.error("unexpected error: label=%s error_type=%s", label, type(e).__name__)
             return None, Errors.SEMGREP_PARSE_FAILED
 
 
 # ── TextSanitiser ─────────────────────────────────────────────────────────────
+
 
 class TextSanitiser:
     """
@@ -390,12 +383,13 @@ class TextSanitiser:
         Returns:
             Valid severity string: CRITICAL | HIGH | MEDIUM | LOW | INFO
         """
-        valid      = {"CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"}
+        valid = {"CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"}
         normalised = severity_str.strip().upper() if severity_str else fallback
         if normalised not in valid:
             Logger.get("utils.severity").warning(
                 "unknown severity: value=%s fallback=%s",
-                severity_str, fallback,
+                severity_str,
+                fallback,
             )
             return fallback
         return normalised
@@ -423,6 +417,7 @@ class TextSanitiser:
 
 # ── Timer ─────────────────────────────────────────────────────────────────────
 
+
 class Timer:
     """
     Elapsed-time context manager.
@@ -434,8 +429,8 @@ class Timer:
     """
 
     def __init__(self) -> None:
-        self._start:    float = 0.0
-        self.elapsed_ms: int  = 0
+        self._start: float = 0.0
+        self.elapsed_ms: int = 0
 
     def __enter__(self) -> "Timer":
         self._start = time.time()
@@ -448,6 +443,7 @@ class Timer:
 # ── Module-level aliases ──────────────────────────────────────────────────────
 # These allow callers to import functions rather than classes,
 # keeping call sites clean without losing the OOP structure.
+
 
 def get_logger(name: str) -> logging.Logger:
     """Alias for Logger.get(name)."""

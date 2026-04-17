@@ -11,7 +11,7 @@ No Python code changes needed.
 from pathlib import Path
 from typing import Optional
 
-from scanner.messages import Errors, Logs
+from scanner.messages import Errors, Logs  # noqa: F401
 from scanner.models import Finding, Severity
 from scanner.utils import Timer, get_logger, parse_cvss, parse_severity, truncate_match
 
@@ -54,7 +54,7 @@ def run_yara_scan(file_path: str) -> list[Finding]:
 
     with Timer() as t:
         try:
-            rules   = yara.compile(str(YARA_RULES_PATH))
+            rules = yara.compile(str(YARA_RULES_PATH))
             matches = rules.match(file_path)
 
         except yara.SyntaxError as e:
@@ -69,7 +69,7 @@ def run_yara_scan(file_path: str) -> list[Finding]:
 
     # ── Map matches to Findings ───────────────────────────────────────────────
     for match in matches:
-        meta         = match.meta or {}
+        meta = match.meta or {}
         severity_str = parse_severity(meta.get("severity", "HIGH"))
 
         # Build match snippet safely — YARA strings may be binary
@@ -82,25 +82,26 @@ def run_yara_scan(file_path: str) -> list[Finding]:
             except Exception:  # nosec B110
                 match_text = None
 
-        findings.append(Finding(
-            rule_id     = match.rule,
-            ave_id      = meta.get("ave_id") or None,
-            title       = meta.get("description", match.rule)[:MAX_MATCH_LENGTH],
-            description = meta.get("description", "YARA rule matched"),
-            severity    = Severity(severity_str),
-            cvss_ai     = parse_cvss(meta.get("cvss_ai", 7.0)),
-            line        = None,
-            match       = truncate_match(match_text, MAX_MATCH_LENGTH),
-            engine      = "yara",
-            owasp       = [
-                s.strip()
-                for s in meta.get("owasp", "").split(",")
-                if s.strip()
-            ],
-        ))
+        findings.append(
+            Finding(
+                rule_id=match.rule,
+                ave_id=meta.get("ave_id") or None,
+                title=meta.get("description", match.rule)[:MAX_MATCH_LENGTH],
+                description=meta.get("description", "YARA rule matched"),
+                severity=Severity(severity_str),
+                cvss_ai=parse_cvss(meta.get("cvss_ai", 7.0)),
+                line=None,
+                match=truncate_match(match_text, MAX_MATCH_LENGTH),
+                engine="yara",
+                owasp=[s.strip() for s in meta.get("owasp", "").split(",") if s.strip()],
+            )
+        )
         log.debug(
             Logs.FINDING_DETECTED,
-            match.rule, severity_str, "yara", None,
+            match.rule,
+            severity_str,
+            "yara",
+            None,
         )
 
     log.debug(Logs.ENGINE_COMPLETE, "yara", len(findings), t.elapsed_ms)

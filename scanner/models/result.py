@@ -21,15 +21,15 @@ class ScanResult:
     """
 
     # ── Identity (stable) ────────────────────────────────────────────────────
-    file_path:      str   # (stable) resolved absolute path of scanned file
-    component_type: str   # (stable) "skill"|"mcp"|"prompt"|"plugin"|"a2a"|"rag"|"model"|"unknown"
+    file_path: str  # (stable) resolved absolute path of scanned file
+    component_type: str  # (stable) "skill"|"mcp"|"prompt"|"plugin"|"a2a"|"rag"|"model"|"unknown"
 
     # ── Results (stable) ─────────────────────────────────────────────────────
-    findings:       list[Finding] = field(default_factory=list)  # (stable) sorted by severity
-    scan_time_ms:   int = 0                                       # (stable) elapsed time
+    findings: list[Finding] = field(default_factory=list)  # (stable) sorted by severity
+    scan_time_ms: int = 0  # (stable) elapsed time
 
     # ── Error ─────────────────────────────────────────────────────────────────
-    error:          Optional[str] = None  # (stable) error code if scan failed, else None
+    error: Optional[str] = None  # (stable) error code if scan failed, else None
 
     # ── Computed properties (stable) ─────────────────────────────────────────
 

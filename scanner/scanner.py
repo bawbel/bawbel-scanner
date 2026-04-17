@@ -33,7 +33,7 @@ from scanner.models import Finding, ScanResult, Severity
 from scanner.engines import run_pattern_scan, run_semgrep_scan, run_yara_scan
 
 # Infrastructure
-from scanner.messages import Errors, Logs
+from scanner.messages import Errors, Logs  # noqa: F401
 from scanner.utils import (
     Timer,
     get_logger,
@@ -59,6 +59,7 @@ __all__ = [
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
+
 def _error_result(
     file_path: str,
     error: str,
@@ -70,24 +71,24 @@ def _error_result(
     """
     log.error(Logs.SCAN_ERROR, file_path, error)
     return ScanResult(
-        file_path      = file_path,
-        component_type = component_type,
-        error          = error,
+        file_path=file_path,
+        component_type=component_type,
+        error=error,
     )
 
 
 def _make_finding(
-    rule_id:     str,
-    title:       str,
+    rule_id: str,
+    title: str,
     description: str,
-    severity:    Severity,
-    cvss_ai:     float,
-    engine:      str,
-    ave_id:      Optional[str] = None,
-    line:        Optional[int] = None,
-    match:       Optional[str] = None,
-    owasp:       Optional[list[str]] = None,
-    max_match:   int = 80,
+    severity: Severity,
+    cvss_ai: float,
+    engine: str,
+    ave_id: Optional[str] = None,
+    line: Optional[int] = None,
+    match: Optional[str] = None,
+    owasp: Optional[list[str]] = None,
+    max_match: int = 80,
 ) -> Finding:
     """
     Construct a sanitised Finding.
@@ -95,16 +96,16 @@ def _make_finding(
     Validates and clamps all fields.
     """
     return Finding(
-        rule_id     = rule_id,
-        ave_id      = ave_id,
-        title       = title[:max_match],
-        description = description,
-        severity    = severity,
-        cvss_ai     = parse_cvss(cvss_ai),
-        line        = line,
-        match       = truncate_match(match, max_match),
-        engine      = engine,
-        owasp       = owasp or [],
+        rule_id=rule_id,
+        ave_id=ave_id,
+        title=title[:max_match],
+        description=description,
+        severity=severity,
+        cvss_ai=parse_cvss(cvss_ai),
+        line=line,
+        match=truncate_match(match, max_match),
+        engine=engine,
+        owasp=owasp or [],
     )
 
 
@@ -121,8 +122,9 @@ def _deduplicate(findings: list[Finding]) -> list[Finding]:
         existing = seen.get(f.rule_id)
         if existing is None:
             seen[f.rule_id] = f
-        elif (SEVERITY_SCORES.get(f.severity.value, 0) >
-              SEVERITY_SCORES.get(existing.severity.value, 0)):
+        elif SEVERITY_SCORES.get(f.severity.value, 0) > SEVERITY_SCORES.get(
+            existing.severity.value, 0
+        ):
             log.debug(Logs.FINDING_DEDUPED, f.rule_id, f.severity.value)
             seen[f.rule_id] = f
 
@@ -132,6 +134,7 @@ def _deduplicate(findings: list[Finding]) -> list[Finding]:
 
 
 # ── Main public API ───────────────────────────────────────────────────────────
+
 
 def scan(file_path: str) -> ScanResult:
     """
@@ -167,7 +170,7 @@ def scan(file_path: str) -> ScanResult:
             return _error_result(str(path), safe_err)
 
         # ── Step 3: Detect component type ─────────────────────────────────────
-        ext            = path.suffix.lower()
+        ext = path.suffix.lower()
         component_type = COMPONENT_EXTENSIONS.get(ext, "unknown")
         log.debug(Logs.COMPONENT_TYPE, path, component_type, ext)
 
@@ -194,20 +197,23 @@ def scan(file_path: str) -> ScanResult:
         # ── Step 6: Deduplicate and sort ──────────────────────────────────────
         findings = _deduplicate(findings)
         findings.sort(
-            key     = lambda f: SEVERITY_SCORES.get(f.severity.value, 0),
-            reverse = True,
+            key=lambda f: SEVERITY_SCORES.get(f.severity.value, 0),
+            reverse=True,
         )
 
     result = ScanResult(
-        file_path      = str(path),
-        component_type = component_type,
-        findings       = findings,
-        scan_time_ms   = t.elapsed_ms,
+        file_path=str(path),
+        component_type=component_type,
+        findings=findings,
+        scan_time_ms=t.elapsed_ms,
     )
 
     log.info(
         Logs.SCAN_COMPLETE,
-        path, len(findings), result.risk_score, t.elapsed_ms,
+        path,
+        len(findings),
+        result.risk_score,
+        t.elapsed_ms,
     )
 
     return result
@@ -228,7 +234,6 @@ def _log_skip_reason(
             size_kb = resolved_path.stat().st_size // 1024 if resolved_path else 0
         except OSError:
             size_kb = 0
-        log.warning(Logs.FILE_TOO_LARGE, original_path, size_kb,
-                    MAX_FILE_SIZE_BYTES // 1024)
+        log.warning(Logs.FILE_TOO_LARGE, original_path, size_kb, MAX_FILE_SIZE_BYTES // 1024)
     else:
         log.warning(Logs.SCAN_SKIPPED, original_path, reason)

@@ -23,8 +23,8 @@ Planned engines:
     sandbox  — Behavioral sandbox, requires Docker + eBPF   (scanner/engines/sandbox_engine.py)
 """
 
-from scanner.engines.pattern       import run_pattern_scan
-from scanner.engines.yara_engine   import run_yara_scan
+from scanner.engines.pattern import run_pattern_scan
+from scanner.engines.yara_engine import run_yara_scan
 from scanner.engines.semgrep_engine import run_semgrep_scan
 
 __all__ = [
