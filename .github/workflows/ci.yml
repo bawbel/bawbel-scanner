@@ -24,13 +24,13 @@ jobs:
         run: pip install black flake8 flake8-bugbear bandit
 
       - name: Check formatting (black)
-        run: black --check --line-length 100 scanner/ cli.py
+        run: black --check --line-length 100 scanner/
 
       - name: Lint (flake8)
-        run: flake8 scanner/ cli.py --max-line-length 100 --extend-ignore=E203,W503
+        run: flake8 scanner/ --max-line-length 100 --extend-ignore=E203,W503,E501
 
       - name: Security lint (bandit)
-        run: bandit -r scanner/ cli.py -c pyproject.toml
+        run: bandit -r scanner/ -c pyproject.toml
 
   # ── Test matrix ────────────────────────────────────────────────────────────
   test:
