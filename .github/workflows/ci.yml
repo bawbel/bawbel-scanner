@@ -79,10 +79,13 @@ jobs:
           cache: pip
 
       - name: Install all deps including semgrep
-        run: pip install click rich semgrep pytest
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[semgrep]"
+          pip install pytest pytest-cov
 
-      - name: Run integration tests
-        run: python -m pytest tests/ -v -m "integration" --tb=short
+      - name: Run full test suite with semgrep engine
+        run: python -m pytest tests/ -v --tb=short
 
   # ── Docker build ───────────────────────────────────────────────────────────
   docker:
@@ -130,7 +133,9 @@ jobs:
           cache: pip
 
       - name: Install scanner
-        run: pip install click rich
+        run: |
+          pip install --upgrade pip
+          pip install -e .
 
       - name: Scan own codebase
         run: |
