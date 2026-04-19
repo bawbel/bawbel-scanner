@@ -26,9 +26,11 @@ Planned engines:
 from scanner.engines.pattern import run_pattern_scan
 from scanner.engines.yara_engine import run_yara_scan
 from scanner.engines.semgrep_engine import run_semgrep_scan
+from scanner.engines.llm_engine import run_llm_scan
 
 __all__ = [
     "run_pattern_scan",
     "run_yara_scan",
     "run_semgrep_scan",
+    "run_llm_scan",
 ]
