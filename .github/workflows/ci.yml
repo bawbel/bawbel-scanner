@@ -142,7 +142,7 @@ jobs:
 
       - name: Scan own codebase
         run: |
-          bawbel scan ./.claude/skills/ --recursive --format json > self-scan-results.json
+          bawbel scan . --recursive --format json > self-scan-results.json
           python3 -c "
           import json
           with open('self-scan-results.json') as f:
