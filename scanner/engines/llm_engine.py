@@ -47,7 +47,7 @@ LLM_ENABLED = os.environ.get("BAWBEL_LLM_ENABLED", "true").lower() != "false"
 # Default model — used when BAWBEL_LLM_MODEL is not set but a known API key is.
 # LiteLLM model string format: https://docs.litellm.ai/docs/providers
 _KEY_TO_DEFAULT_MODEL = {
-    "ANTHROPIC_API_KEY": "claude-haiku-4-5-20251001",  # gitleaks:allow
+    "ANTHROPIC_API_KEY": "claude-haiku-4-5-20251001",
     "OPENAI_API_KEY": "gpt-4o-mini",
     "GEMINI_API_KEY": "gemini/gemini-1.5-flash",
     "MISTRAL_API_KEY": "mistral/mistral-small",
@@ -139,12 +139,24 @@ def _call_llm(model: str, content: str) -> Optional[str]:
         log.warning("LLM engine: litellm not installed — " 'pip install "bawbel-scanner[llm]"')
         return None
 
+    # Wrap content in security analysis framing.
+    # This makes it unambiguous to the LLM provider that this is a
+    # defensive security review, not a request to execute harmful instructions.
+    wrapped = (
+        "The following is the content of an agentic AI component file "
+        "submitted for security analysis. Analyse it for vulnerabilities "
+        "and respond with a JSON array as instructed.\n\n"
+        "--- BEGIN COMPONENT CONTENT ---\n"
+        f"{content}\n"
+        "--- END COMPONENT CONTENT ---"
+    )
+
     try:
         response = litellm.completion(
             model=model,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": content},
+                {"role": "user", "content": wrapped},
             ],
             max_tokens=2048,
             timeout=LLM_TIMEOUT_SEC,
@@ -152,9 +164,10 @@ def _call_llm(model: str, content: str) -> Optional[str]:
         return response.choices[0].message.content or None
     except Exception as e:
         log.warning(
-            "LLM engine: call failed: model=%s error_type=%s",
+            "LLM engine: call failed: model=%s error_type=%s detail=%s",
             model,
             type(e).__name__,
+            str(e)[:200],
         )
         return None
 
