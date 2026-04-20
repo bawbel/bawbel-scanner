@@ -14,7 +14,7 @@ Activation:
   If no model is configured this engine is silently skipped.
 
 Provider examples (LiteLLM model strings):
-  ANTHROPIC_API_KEY  + BAWBEL_LLM_MODEL=claude-haiku-4-5       (default)
+  ANTHROPIC_API_KEY  + BAWBEL_LLM_MODEL=claude-haiku-4-5-20251001  (default)
   OPENAI_API_KEY     + BAWBEL_LLM_MODEL=gpt-4o-mini
   GEMINI_API_KEY     + BAWBEL_LLM_MODEL=gemini/gemini-1.5-flash
   MISTRAL_API_KEY    + BAWBEL_LLM_MODEL=mistral/mistral-small
@@ -47,7 +47,7 @@ LLM_ENABLED = os.environ.get("BAWBEL_LLM_ENABLED", "true").lower() != "false"
 # Default model — used when BAWBEL_LLM_MODEL is not set but a known API key is.
 # LiteLLM model string format: https://docs.litellm.ai/docs/providers
 _KEY_TO_DEFAULT_MODEL = {
-    "ANTHROPIC_API_KEY": "claude-haiku-4-5",
+    "ANTHROPIC_API_KEY": "claude-haiku-4-5-20251001",  # gitleaks:allow
     "OPENAI_API_KEY": "gpt-4o-mini",
     "GEMINI_API_KEY": "gemini/gemini-1.5-flash",
     "MISTRAL_API_KEY": "mistral/mistral-small",
