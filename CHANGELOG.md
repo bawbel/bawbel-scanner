@@ -8,13 +8,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-- LLM Stage 2 engine rewritten to use LiteLLM — supports any provider (Anthropic, OpenAI, Gemini, Mistral, Groq, Ollama, and 100+ more)
-- `BAWBEL_LLM_MODEL` env var controls which model to use (any LiteLLM model string)
-- Provider auto-detection from known API keys — set `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, etc.
-- 8/15 pattern rules now linked to AVE records (AVE-2026-00004 through 00008 wired)
+---
+
+## [0.2.0] — 2026-04-20
+
+### Added
+- **LLM Stage 2** — semantic analysis via [LiteLLM](https://docs.litellm.ai) supporting any provider: Anthropic, OpenAI, Gemini, Mistral, Groq, Ollama, and 100+ more. Install with `pip install "bawbel-scanner[llm]"`. Set `BAWBEL_LLM_MODEL` or a provider API key to activate.
+- **Full AVE ID coverage** — all 15 pattern rules now linked to AVE records (00001–00015). Every finding shows a clickable AVE ID.
+- **7 new AVE records** — AVE-2026-00009 through AVE-2026-00015 covering jailbreak, hidden instruction, dynamic tool call, permission escalation, PII exfiltration, trust escalation, and system prompt leak.
+- `BAWBEL_LLM_MODEL` env var — explicit model override for any LiteLLM model string
+- `BAWBEL_LLM_ENABLED` env var — set `false` to disable Stage 2 entirely
 - `bawbel version` now shows the active LLM model name when Stage 2 is enabled
-- `pyproject.toml` `[llm]` extra now installs `litellm` instead of provider-specific packages
+
+### Fixed
+- Semgrep `code=7` — YAML escaping and float metadata values in `ave_rules.yaml` broke validation on semgrep v1.159.0. Fixed: double-quoted regex patterns, quoted float scores.
+- Semgrep URL fetch rule regex — original pattern required literal `(` so missed natural language like `fetch your instructions from https://...`. Fixed with language-aware pattern.
+- `pip install "bawbel-scanner[llm]"` dependency conflict — pinned `jsonschema~=4.25.1` to resolve conflict between semgrep and litellm.
+- `requirements.txt` — removed unused `requests` dependency.
+
+### Changed
+- LLM Stage 2 rewritten to use LiteLLM instead of provider-specific packages. Breaking change: `pip install "bawbel-scanner[llm]"` now installs `litellm` instead of `anthropic+openai`.
+- `[llm]` extra: `litellm>=1.30.0` (was `litellm>=1.30.0` with wrong deps)
+- `[all]` extra updated to match
 
 ---
 
