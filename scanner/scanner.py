@@ -191,7 +191,7 @@ def scan(file_path: str) -> ScanResult:
         findings.extend(run_pattern_scan(content))
         findings.extend(run_yara_scan(str(path)))
         findings.extend(run_semgrep_scan(str(path)))
-        findings.extend(run_llm_scan(content))
+        findings.extend(run_llm_scan(content))  # Stage 2: LLM semantic analysis
         # Future: findings.extend(run_sandbox_scan(str(path)))
 
         # ── Step 6: Deduplicate and sort ──────────────────────────────────────

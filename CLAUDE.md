@@ -9,6 +9,20 @@
 
 ---
 
+## What this project is
+
+Bawbel Scanner is an open-source CLI tool that scans agentic AI components —
+SKILL.md files, MCP server manifests, system prompts, and plugins — for security
+vulnerabilities mapped to the [AVE standard](https://github.com/bawbel/bawbel-ave).
+
+```bash
+pip install bawbel-scanner
+bawbel scan ./my-skill.md
+bawbel report ./my-skill.md   # full remediation guide
+```
+
+---
+
 ## Repository Structure
 
 ```

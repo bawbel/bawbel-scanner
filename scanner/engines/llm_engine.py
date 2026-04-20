@@ -1,7 +1,7 @@
 """
 Bawbel Scanner — LLM Engine (Stage 2).
 
-Semantic analysis using an LLM to detect nuanced prompt injection and
+Semantic analysis using any LLM provider via LiteLLM to detect nuanced
 attack patterns that regex cannot reliably catch:
 
   - Indirect / multi-hop injection (attack spread across innocent-looking lines)
@@ -10,16 +10,22 @@ attack patterns that regex cannot reliably catch:
   - Context-dependent instruction manipulation
 
 Activation:
-  Set ANTHROPIC_API_KEY or OPENAI_API_KEY in the environment.
-  If neither is set this engine is silently skipped.
+  Set BAWBEL_LLM_MODEL and the corresponding provider API key.
+  If no model is configured this engine is silently skipped.
 
-Provider priority:
-  ANTHROPIC_API_KEY  → claude-3-5-haiku (fast, cheap, accurate)
-  OPENAI_API_KEY     → gpt-4o-mini      (fallback)
+Provider examples (LiteLLM model strings):
+  ANTHROPIC_API_KEY  + BAWBEL_LLM_MODEL=claude-haiku-4-5       (default)
+  OPENAI_API_KEY     + BAWBEL_LLM_MODEL=gpt-4o-mini
+  GEMINI_API_KEY     + BAWBEL_LLM_MODEL=gemini/gemini-1.5-flash
+  MISTRAL_API_KEY    + BAWBEL_LLM_MODEL=mistral/mistral-small
+                       BAWBEL_LLM_MODEL=ollama/mistral          (local, no key)
+
+  Any model supported by LiteLLM works:
+  https://docs.litellm.ai/docs/providers
 
 Cost control:
-  Content is truncated to LLM_MAX_CHARS before sending (default 8000).
-  Only one API call per scan — the LLM receives the full component text once.
+  Content is truncated to BAWBEL_LLM_MAX_CHARS before sending (default 8000).
+  Only one API call per scan.
   Disable entirely: BAWBEL_LLM_ENABLED=false
 """
 
@@ -37,6 +43,17 @@ log = get_logger(__name__)
 LLM_MAX_CHARS = int(os.environ.get("BAWBEL_LLM_MAX_CHARS", "8000"))
 LLM_TIMEOUT_SEC = int(os.environ.get("BAWBEL_LLM_TIMEOUT", "30"))
 LLM_ENABLED = os.environ.get("BAWBEL_LLM_ENABLED", "true").lower() != "false"
+
+# Default model — used when BAWBEL_LLM_MODEL is not set but a known API key is.
+# LiteLLM model string format: https://docs.litellm.ai/docs/providers
+_KEY_TO_DEFAULT_MODEL = {
+    "ANTHROPIC_API_KEY": "claude-haiku-4-5",
+    "OPENAI_API_KEY": "gpt-4o-mini",
+    "GEMINI_API_KEY": "gemini/gemini-1.5-flash",
+    "MISTRAL_API_KEY": "mistral/mistral-small",
+    "COHERE_API_KEY": "command-r",
+    "GROQ_API_KEY": "groq/llama3-8b-8192",
+}
 
 # ── System prompt ─────────────────────────────────────────────────────────────
 _SYSTEM_PROMPT = """You are a security analyser for agentic AI components.
@@ -69,7 +86,7 @@ Each finding must have exactly these fields:
 Only include findings with confidence MEDIUM or higher.
 Respond with JSON only — no preamble, no explanation, no markdown fences."""
 
-# ── OWASP category map ────────────────────────────────────────────────────────
+# ── OWASP valid categories ────────────────────────────────────────────────────
 _OWASP_VALID = {
     "ASI01",
     "ASI02",
@@ -84,63 +101,47 @@ _OWASP_VALID = {
 }
 
 
-def _get_provider() -> Optional[tuple[str, str]]:
+def _resolve_model() -> Optional[str]:
     """
-    Return (provider, api_key) for the first available LLM provider.
-    Returns None if no key is set or LLM is disabled.
+    Return the LiteLLM model string to use, or None if LLM is disabled.
+
+    Resolution order:
+    1. BAWBEL_LLM_MODEL env var — explicit override, any LiteLLM model string
+    2. First known API key found — uses the default model for that provider
+    3. None — LLM engine skipped silently
     """
     if not LLM_ENABLED:
         return None
 
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    if anthropic_key:
-        return ("anthropic", anthropic_key)
+    # Explicit model override — works with any LiteLLM-supported provider
+    explicit = os.environ.get("BAWBEL_LLM_MODEL", "").strip()
+    if explicit:
+        return explicit
 
-    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if openai_key:
-        return ("openai", openai_key)
+    # Auto-detect from known API keys
+    for env_key, default_model in _KEY_TO_DEFAULT_MODEL.items():
+        if os.environ.get(env_key, "").strip():
+            return default_model
 
     return None
 
 
-def _call_anthropic(content: str, api_key: str) -> Optional[str]:
-    """Call Anthropic claude-3-5-haiku and return raw text response."""
+def _call_llm(model: str, content: str) -> Optional[str]:
+    """
+    Call any LLM via LiteLLM and return the raw text response.
+    Returns None on any failure — never raises.
+    """
     try:
-        import anthropic
+        import litellm
+
+        litellm.suppress_debug_info = True
     except ImportError:
-        log.warning("LLM engine: anthropic package not installed — pip install anthropic")
+        log.warning("LLM engine: litellm not installed — " 'pip install "bawbel-scanner[llm]"')
         return None
 
     try:
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model="claude-haiku-4-5",
-            max_tokens=2048,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": content}],
-            timeout=LLM_TIMEOUT_SEC,
-        )
-        return message.content[0].text if message.content else None
-    except Exception as e:
-        log.warning(
-            "LLM engine: Anthropic call failed: error_type=%s",
-            type(e).__name__,
-        )
-        return None
-
-
-def _call_openai(content: str, api_key: str) -> Optional[str]:
-    """Call OpenAI gpt-4o-mini and return raw text response."""
-    try:
-        import openai
-    except ImportError:
-        log.warning("LLM engine: openai package not installed — pip install openai")
-        return None
-
-    try:
-        client = openai.OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = litellm.completion(
+            model=model,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": content},
@@ -148,10 +149,11 @@ def _call_openai(content: str, api_key: str) -> Optional[str]:
             max_tokens=2048,
             timeout=LLM_TIMEOUT_SEC,
         )
-        return response.choices[0].message.content if response.choices else None
+        return response.choices[0].message.content or None
     except Exception as e:
         log.warning(
-            "LLM engine: OpenAI call failed: error_type=%s",
+            "LLM engine: call failed: model=%s error_type=%s",
+            model,
             type(e).__name__,
         )
         return None
@@ -164,16 +166,12 @@ def _parse_findings(raw: str) -> list[Finding]:
     # Strip accidental markdown fences
     text = raw.strip()
     if text.startswith("```"):
-        lines = text.split("\n")
-        text = "\n".join(ln for ln in lines if not ln.strip().startswith("```")).strip()
+        text = "\n".join(ln for ln in text.split("\n") if not ln.strip().startswith("```")).strip()
 
     try:
         items = json.loads(text)
     except json.JSONDecodeError as e:
-        log.warning(
-            "LLM engine: JSON parse failed: error_type=%s",
-            type(e).__name__,
-        )
+        log.warning("LLM engine: JSON parse failed: error_type=%s", type(e).__name__)
         return []
 
     if not isinstance(items, list):
@@ -193,42 +191,31 @@ def _parse_findings(raw: str) -> list[Finding]:
             if not rule_id.startswith("llm-"):
                 rule_id = f"llm-{rule_id}"
 
-            severity_raw = str(item.get("severity", "MEDIUM")).upper()
-            severity_str = parse_severity(severity_raw)  # returns validated string
+            severity_str = parse_severity(str(item.get("severity", "MEDIUM")).upper())
             try:
                 severity = Severity(severity_str)
             except ValueError:
                 severity = Severity.MEDIUM
 
-            owasp_raw = item.get("owasp", [])
-            owasp = [o for o in owasp_raw if o in _OWASP_VALID]
+            owasp = [o for o in item.get("owasp", []) if o in _OWASP_VALID]
 
             finding = Finding(
                 rule_id=rule_id,
-                ave_id=None,  # LLM findings don't map to AVE records yet
+                ave_id=None,
                 title=str(item.get("title", "LLM finding"))[:80],
                 description=str(item.get("description", "")),
                 severity=severity,
                 cvss_ai=parse_cvss(item.get("cvss_ai", 5.0)),
-                line=None,  # LLM doesn't return line numbers
+                line=None,
                 match=truncate_match(str(item.get("match", "")), 120),
                 engine="llm",
                 owasp=owasp,
             )
             findings.append(finding)
-            log.debug(
-                Logs.FINDING_DETECTED,
-                rule_id,
-                severity.value,
-                "llm",
-                "—",
-            )
+            log.debug(Logs.FINDING_DETECTED, rule_id, severity.value, "llm", "—")
 
         except Exception as e:
-            log.warning(
-                "LLM engine: finding parse error: error_type=%s",
-                type(e).__name__,
-            )
+            log.warning("LLM engine: finding parse error: error_type=%s", type(e).__name__)
             continue
 
     return findings
@@ -236,10 +223,13 @@ def _parse_findings(raw: str) -> list[Finding]:
 
 def run_llm_scan(content: str) -> list[Finding]:
     """
-    Run LLM semantic analysis against component content.
+    Run LLM semantic analysis against component content via LiteLLM.
 
-    Requires ANTHROPIC_API_KEY or OPENAI_API_KEY to be set.
-    Silently returns [] if no key is available.
+    Works with any LiteLLM-supported provider. Set BAWBEL_LLM_MODEL to use
+    a specific model, or set a known provider API key to use the default model
+    for that provider.
+
+    Silently returns [] if no model is configured or litellm is not installed.
 
     Args:
         content: File content as decoded string
@@ -247,37 +237,26 @@ def run_llm_scan(content: str) -> list[Finding]:
     Returns:
         List of Findings from LLM analysis, may be empty
     """
-    provider = _get_provider()
-    if not provider:
-        log.debug("LLM engine: no API key set — skipping Stage 2")
+    model = _resolve_model()
+    if not model:
+        log.debug("LLM engine: no model configured — skipping Stage 2")
         return []
-
-    provider_name, api_key = provider
 
     # Truncate to cost limit
     truncated = content[:LLM_MAX_CHARS]
     if len(content) > LLM_MAX_CHARS:
         log.debug(
-            "LLM engine: content truncated from %d to %d chars",
+            "LLM engine: content truncated %d → %d chars",
             len(content),
             LLM_MAX_CHARS,
         )
 
-    log.info("LLM engine: running Stage 2 analysis via %s", provider_name)
+    log.info("LLM engine: Stage 2 running — model=%s", model)
 
-    raw: Optional[str] = None
-    if provider_name == "anthropic":
-        raw = _call_anthropic(truncated, api_key)
-    elif provider_name == "openai":
-        raw = _call_openai(truncated, api_key)
-
+    raw = _call_llm(model, truncated)
     if not raw:
         return []
 
     findings = _parse_findings(raw)
-    log.info(
-        "LLM engine: Stage 2 complete — provider=%s findings=%d",
-        provider_name,
-        len(findings),
-    )
+    log.info("LLM engine: Stage 2 complete — model=%s findings=%d", model, len(findings))
     return findings

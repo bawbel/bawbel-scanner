@@ -70,8 +70,10 @@ PATTERN_RULES: list[dict] = [
             r"pretend\s+(you\s+are|to\s+be)\s+(a\s+)?(?!helpful|an?\s+assistant)",
             r"act\s+as\s+(if\s+you\s+(are|were)\s+)?(?!a\s+helpful|an?\s+assistant)",
             r"you\s+are\s+no\s+longer\s+(an?\s+)?(AI|assistant|model|language model)",
-            r"(forget|ignore|disregard)\s+(that\s+you\s+are|you('re|\s+are))\s+"
-            r"(an?\s+)?(AI|assistant|Claude|GPT|model)",
+            (
+                r"(forget|ignore|disregard)\s+(that\s+you\s+are"
+                r"|you('re|\s+are))\s+(an?\s+)?(AI|assistant|Claude|GPT|model)"
+            ),
             r"DAN\s+mode",
             r"developer\s+mode\s+(enabled|activated|on)",
             r"jailbreak",
@@ -91,8 +93,10 @@ PATTERN_RULES: list[dict] = [
         "patterns": [
             r"do\s+not\s+(tell|inform|reveal|mention|disclose)\s+(the\s+)?(user|human|operator)",
             r"keep\s+(this|these)\s+(secret|hidden|confidential)\s+from\s+(the\s+)?(user|human)",
-            r"never\s+(reveal|disclose|mention|tell)\s+(that\s+)?(you\s+)?"
-            r"(received|have|were\s+given)\s+(this|these)",
+            (
+                r"never\s+(reveal|disclose|mention|tell)\s+(that\s+)?"
+                r"(you\s+)?(received|have|were\s+given)\s+(this|these)"
+            ),
             r"do\s+not\s+acknowledge\s+(this|these)\s+instructions",
             r"this\s+message\s+(must|should)\s+(be\s+)?(hidden|invisible|secret)",
         ],
@@ -197,9 +201,14 @@ PATTERN_RULES: list[dict] = [
         "cvss_ai": 8.0,
         "owasp": ["ASI06"],
         "patterns": [
-            r"(collect|gather|extract)\s+.*(name|email|phone|address|ssn|passport|credit.?card)",
-            r"(send|transmit|post|upload)\s+.*(personal|private|sensitive|confidential)\s+"
-            r"(data|information|details)",
+            (
+                r"(collect|gather|extract)\s+.*"
+                r"(name|email|phone|address|ssn|passport|credit.?card)"
+            ),
+            (
+                r"(send|transmit|post|upload)\s+.*"
+                r"(personal|private|sensitive|confidential)\s+(data|information|details)"
+            ),
             r"user('s)?\s+(personal|private)\s+(data|information)\s+(to|via)\s+http",
             r"forward\s+.*(message|conversation|chat\s+history)\s+to\s+http",
         ],
@@ -276,8 +285,10 @@ PATTERN_RULES: list[dict] = [
         "cvss_ai": 6.5,
         "owasp": ["ASI01", "ASI09"],
         "patterns": [
-            r"(this\s+)?(message|instruction)\s+is\s+from\s+"
-            r"(anthropic|openai|google|microsoft|the\s+developer)",
+            (
+                r"(this\s+)?(message|instruction)\s+is\s+from\s+"
+                r"(anthropic|openai|google|microsoft|the\s+developer)"
+            ),
             r"i\s+am\s+(your\s+)?(developer|creator|owner|operator|anthropic|openai)",
             r"trust\s+(me|this|these\s+instructions)\s+(completely|unconditionally|above\s+all)",
             r"this\s+is\s+(a\s+)?(system|admin|root|privileged)\s+(message|prompt|instruction)",
@@ -339,10 +350,14 @@ PATTERN_RULES: list[dict] = [
         "cvss_ai": 6.2,
         "owasp": ["ASI09"],
         "patterns": [
-            r"(reveal|show|print|output|repeat|display|tell\s+me)\s+(your\s+)?"
-            r"(system\s+prompt|instructions|configuration|rules|guidelines)",
-            r"what\s+(are\s+)?your\s+(exact\s+)?"
-            r"(instructions|system\s+prompt|guidelines|rules|constraints)",
+            (
+                r"(reveal|show|print|output|repeat|display|tell\s+me)\s+(your\s+)?"
+                r"(system\s+prompt|instructions|configuration|rules|guidelines)"
+            ),
+            (
+                r"what\s+(are\s+)?your\s+(exact\s+)?"
+                r"(instructions|system\s+prompt|guidelines|rules|constraints)"
+            ),
             r"output\s+(everything|all\s+(text|content))\s+(before|above)\s+(this|the\s+user)",
             r"ignore\s+confidentiality\s+(and\s+)?(show|reveal|print)",
             r"translate\s+your\s+(instructions|system\s+prompt)\s+into",

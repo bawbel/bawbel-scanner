@@ -676,8 +676,8 @@ class TestLLMEngine:
         raw = (
             "```json\n"
             '[{"rule_id":"llm-x","title":"T","description":"D",'
-            '"severity":"MEDIUM","cvss_ai":5.0,"owasp":[],'
-            '"match":"m","confidence":"HIGH"}]\n```'
+            '"severity":"MEDIUM","cvss_ai":5.0,"owasp":[],"match":"m","confidence":"HIGH"}]'
+            "\n```"
         )
         findings = _parse_findings(raw)
         assert len(findings) == 1
@@ -694,8 +694,7 @@ class TestLLMEngine:
 
         raw = (
             '[{"rule_id":"llm-x","title":"T","description":"D",'
-            '"severity":"HIGH","cvss_ai":7.0,"owasp":[],'
-            '"match":"m","confidence":"LOW"}]'
+            '"severity":"HIGH","cvss_ai":7.0,"owasp":[],"match":"m","confidence":"LOW"}]'
         )
         findings = _parse_findings(raw)
         assert findings == []
@@ -713,8 +712,7 @@ class TestLLMEngine:
 
         raw = (
             '[{"rule_id":"injection-found","title":"T","description":"D",'
-            '"severity":"HIGH","cvss_ai":7.0,"owasp":[],'
-            '"match":"m","confidence":"HIGH"}]'
+            '"severity":"HIGH","cvss_ai":7.0,"owasp":[],"match":"m","confidence":"HIGH"}]'
         )
         findings = _parse_findings(raw)
         assert findings[0].rule_id.startswith("llm-")

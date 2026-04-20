@@ -17,9 +17,9 @@ Current engines:
     pattern  — regex matching, stdlib only, always runs     (scanner/engines/pattern.py)
     yara     — YARA rules, requires yara-python             (scanner/engines/yara_engine.py)
     semgrep  — Semgrep rules, requires semgrep CLI          (scanner/engines/semgrep_engine.py)
+    llm      — LLM semantic analysis, requires API key      (scanner/engines/llm_engine.py)
 
 Planned engines:
-    llm      — LLM semantic analysis, requires API key      (scanner/engines/llm_engine.py)
     sandbox  — Behavioral sandbox, requires Docker + eBPF   (scanner/engines/sandbox_engine.py)
 """
 
