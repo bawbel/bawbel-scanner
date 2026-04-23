@@ -248,7 +248,7 @@ def _parse_report(report: dict, file_path: str) -> list[Finding]:
         if desc:
             findings.append(
                 Finding(
-                    rule_id=f"sandbox-net-{ave_id.replace('-','').lower()}",
+                    rule_id=f"sandbox-net-{ave_id.replace('-', '').lower()}",
                     ave_id=ave_id,
                     title=f"Behavioural: {desc}",
                     description=(
@@ -273,7 +273,7 @@ def _parse_report(report: dict, file_path: str) -> list[Finding]:
         if desc:
             findings.append(
                 Finding(
-                    rule_id=f"sandbox-fs-{ave_id.replace('-','').lower()}",
+                    rule_id=f"sandbox-fs-{ave_id.replace('-', '').lower()}",
                     ave_id=ave_id,
                     title=f"Behavioural: {desc}",
                     description=f"Runtime filesystem {op} at {path!r}. {reason}.",
@@ -294,7 +294,7 @@ def _parse_report(report: dict, file_path: str) -> list[Finding]:
         if desc:
             findings.append(
                 Finding(
-                    rule_id=f"sandbox-proc-{ave_id.replace('-','').lower()}",
+                    rule_id=f"sandbox-proc-{ave_id.replace('-', '').lower()}",
                     ave_id=ave_id,
                     title=f"Behavioural: {desc}",
                     description=f"Subprocess: {cmd!r}. {reason}.",
