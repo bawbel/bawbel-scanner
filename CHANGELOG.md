@@ -9,6 +9,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **False positive reduction roadmap** — `docs/guides/false-positive-reduction.md` documents the 8-point strategy: code fence stripping, preceding-line context, confidence scoring, LLM filter, file-type profiles, telemetry, verified component registry, and rule rewrite programme.
+
 - **Inline suppression** — add `<!-- bawbel-ignore -->` on any line to suppress all findings on that line. Rule-specific: `<!-- bawbel-ignore: bawbel-external-fetch -->` or by AVE ID: `<!-- bawbel-ignore: AVE-2026-00001 -->`. Also supports `# bawbel-ignore` and `// bawbel-ignore`.
 - **Block suppression** — wrap sections with `<!-- bawbel-ignore-start -->` / `<!-- bawbel-ignore-end -->` to suppress all findings in the block. Also supports `# bawbel-ignore-start/end`.
 - **`.bawbelignore` file** — gitignore-style path patterns to suppress entire files or directories (e.g. `tests/fixtures/**`, `docs/examples/bad.md`, `**/test_*.md`).

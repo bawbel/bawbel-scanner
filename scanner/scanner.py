@@ -49,6 +49,58 @@ from scanner.utils import (
     resolve_path,
     truncate_match,
 )
+import re as _re
+
+# Matches fenced code blocks: ```...``` (any language tag, any content)
+# Uses DOTALL so . matches newlines. Non-greedy to handle multiple fences.
+_FENCE_RE = _re.compile(r"```[^\n]*\n(.*?)```", _re.DOTALL)
+# Also match ~~~...~~~ fences (less common but valid Markdown)
+_TILDE_RE = _re.compile(r"~~~[^\n]*\n(.*?)~~~", _re.DOTALL)
+
+
+def _strip_code_fences(content: str) -> str:
+    """
+    Replace fenced code block content with blank lines, preserving line numbers.
+
+    Replaces the *content* of each ``` or ~~~ block with an equal number of
+    blank lines so that line N in the stripped content maps to the same line N
+    in the original. This keeps Finding.line accurate — the line number a
+    pattern engine reports is still correct relative to the original file.
+
+    The fence markers themselves (``` and ```) are kept — only the content
+    between them is blanked. This means a finding on the fence-open line is
+    still possible (the marker line is not blanked), but content lines inside
+    the fence are not scanned.
+
+    Why preserve line numbers:
+        If we deleted fenced lines instead of blanking them, every finding
+        below a fence would have an off-by-N line number.
+
+    Args:
+        content: Raw file content string.
+
+    Returns:
+        Content string with fenced block interiors replaced by blank lines.
+    """
+
+    def _blank_interior(m: _re.Match) -> str:
+        interior = m.group(1)
+        # Count how many newlines are in the interior and replace with blanks
+        blank_lines = "\n" * interior.count("\n")
+        # Reconstruct: opening fence line + blank interior + closing fence
+        fence_open = m.group(0).split("\n")[0]
+        return fence_open + "\n" + blank_lines + "```"
+
+    def _blank_tilde(m: _re.Match) -> str:
+        interior = m.group(1)
+        blank_lines = "\n" * interior.count("\n")
+        fence_open = m.group(0).split("\n")[0]
+        return fence_open + "\n" + blank_lines + "~~~"
+
+    result = _FENCE_RE.sub(_blank_interior, content)
+    result = _TILDE_RE.sub(_blank_tilde, result)
+    return result
+
 
 log = get_logger(__name__)
 
@@ -243,16 +295,21 @@ def scan(file_path: str, no_ignore: bool = False) -> ScanResult:
         log.info(Logs.SCAN_START, path, component_type, size_kb)
 
         # ── Step 5: Run detection engines ─────────────────────────────────────
+        # Strip code fence content before scanning — replaces fence interiors with
+        # blank lines so line numbers stay correct. Original content is passed only
+        # to suppression, which needs to see inline bawbel-ignore comments.
+        stripped = _strip_code_fences(content)
+
         findings: list[Finding] = []
-        findings.extend(run_pattern_scan(content))
-        findings.extend(run_yara_scan(str(path)))
-        findings.extend(run_semgrep_scan(str(path)))
-        findings.extend(run_llm_scan(content))  # Stage 2: LLM semantic analysis
+        findings.extend(run_pattern_scan(stripped))
+        findings.extend(run_yara_scan(str(path), stripped))
+        findings.extend(run_semgrep_scan(str(path), stripped))
+        findings.extend(run_llm_scan(content))  # Stage 2: full content
 
         # ── Stage 3: Behavioral sandbox ──────────────────────────────────────
         if SANDBOX_ENABLED:
             if is_docker_available():
-                sandbox_findings = run_sandbox_scan(str(path))
+                sandbox_findings = run_sandbox_scan(str(path), stripped_content=stripped)
                 findings.extend(sandbox_findings)
                 if not sandbox_findings:
                     global _warned_sandbox_no_image
