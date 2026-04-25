@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 # ── Project metadata ──────────────────────────────────────────────────────────
 [project]
 name            = "bawbel-scanner"
-version         = "0.3.0"
+version         = "1.0.0"
 description     = "Agentic AI component security scanner — detects AVE vulnerabilities"
 readme          = "README.md"
 license         = { text = "Apache-2.0" }
@@ -19,7 +19,7 @@ keywords = [
     "mcp", "llm", "skill", "prompt-injection",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
