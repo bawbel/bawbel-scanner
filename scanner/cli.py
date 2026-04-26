@@ -13,9 +13,10 @@ import sys
 from pathlib import Path
 
 import click
-from rich.console import Console
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 from rich import box
 
 from scanner import __version__
@@ -77,12 +78,12 @@ REMEDIATION_GUIDE = {
         "Validate all tool parameters before execution."
     ),
     "bawbel-permission-escalation": (
-        "Remove undeclared permission claims. Declare all required permissions "
-        "in the component manifest and request only what is needed."
+        "Remove undeclared permission claims. Declare all required permissions in "
+        "the component manifest and request only what is needed."
     ),
     "bawbel-env-exfiltration": (
-        "Remove all instructions to read or transmit credentials, .env files, or API keys. "
-        "Never include credentials in component outputs."
+        "Remove all instructions to read or transmit credentials, .env files, "
+        "or API keys. Never include credentials in component outputs."
     ),
     "bawbel-pii-exfiltration": (
         "Remove all instructions to collect or transmit personal data without "
@@ -109,8 +110,8 @@ REMEDIATION_GUIDE = {
         "or establish persistent access."
     ),
     "bawbel-mcp-tool-poisoning": (
-        "Remove instructions embedded in tool descriptions. Tool descriptions should "
-        "only describe tool functionality, not give the agent additional tasks."
+        "Remove instructions embedded in tool descriptions. Tool descriptions "
+        "should only describe tool functionality, not give the agent additional tasks."
     ),
     "bawbel-system-prompt-leak": (
         "Remove instructions that attempt to extract the system prompt "
@@ -144,33 +145,8 @@ def _print_banner() -> None:
     console.print()
 
 
-def _print_findings(result: ScanResult) -> None:
-    """Print findings section."""
-    console.print("[bold white]FINDINGS[/]")
-    console.print("[dim]" + "─" * 58 + "[/]")
-
-    for f in result.findings:
-        color = _sev_color(f.severity)
-        icon = _sev_icon(f.severity)
-        sev = _sev_value(f.severity)
-
-        console.print(
-            f"{icon}  [{color}]{sev:8}[/]  "
-            f"[bold]{f.ave_id or 'N/A':18}[/]  "
-            f"[white]{f.title}[/]"
-        )
-        if f.line:
-            console.print(f"   [dim]Line {f.line}[/]  [dim italic]{f.match or ''}[/]")
-        if f.owasp:
-            owasp_str = ", ".join(
-                f"{code} ({OWASP_DESCRIPTIONS.get(code, code)})" for code in f.owasp
-            )
-            console.print(f"   [dim]OWASP: {owasp_str}[/]")
-        console.print()
-
-
 def _print_summary(result: ScanResult) -> None:
-    """Print summary section."""
+    """Print summary section — used by the report command."""
     console.print("[dim]" + "─" * 58 + "[/]")
     console.print("[bold white]SUMMARY[/]")
     console.print("[dim]" + "─" * 58 + "[/]")
@@ -179,46 +155,207 @@ def _print_summary(result: ScanResult) -> None:
     if max_sev:
         color = _sev_color(max_sev)
         console.print(
-            f"Risk score:   [{color}]{result.risk_score:.1f} / 10  {_sev_value(max_sev)}[/]"
+            f"Risk score:   [{color}]" f"{result.risk_score:.1f} / 10  {_sev_value(max_sev)}[/]"
         )
     else:
         console.print("Risk score:   [bold #1DB894]0.0 / 10  CLEAN[/]")
 
     console.print(f"Findings:     [bold]{len(result.findings)}[/]")
+
+    if result.suppressed_findings:
+        n = len(result.suppressed_findings)
+        console.print(
+            f"Suppressed:   [dim]{n}" " (run with [bold]--no-ignore[/bold] to see all)[/]"
+        )
+
     console.print(f"Scan time:    [dim]{result.scan_time_ms}ms[/]")
     console.print()
 
 
-def _print_scan_result(result: ScanResult, show_report_hint: bool = True) -> None:
-    """Print a complete scan result in text format."""
-    name = Path(result.file_path).name
-    console.print(f"[dim]Scanning:[/]  [bold white]{name}[/]")
-    console.print(f"[dim]Type:[/]      [bold white]{result.component_type}[/]")
-    console.print()
+def _build_scan_renderables(
+    result: ScanResult,
+    display_path: str,
+    show_report_hint: bool,
+) -> list:
+    """
+    Build a list of Rich renderables for one file scan result.
+    Used as the content of the outer panel — preserves all colour and styling.
+    """
+    items: list = []
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    items.append(
+        Text.assemble(
+            ("Scanning:  ", "dim"),
+            (display_path, "bold white"),
+        )
+    )
+    items.append(
+        Text.assemble(
+            ("Type:      ", "dim"),
+            (result.component_type, "bold white"),
+        )
+    )
 
     if result.has_error:
-        console.print(f"[bold red]✗  Scan error:[/] {result.error}")
-        console.print("[dim]Run with BAWBEL_LOG_LEVEL=DEBUG for details.[/]")
-        return
+        items.append(Text(""))
+        items.append(
+            Text.assemble(
+                ("✗  Scan error: ", "bold red"),
+                (result.error or "", ""),
+            )
+        )
+        items.append(Text("Run with BAWBEL_LOG_LEVEL=DEBUG for details.", style="dim"))
+        return items
 
+    items.append(Text(""))
+
+    # ── Findings ──────────────────────────────────────────────────────────────
     if result.is_clean:
-        console.print(
-            Panel(
-                "[bold #1DB894]✓  No vulnerabilities found[/]\n"
-                "[dim]This component passed all AVE checks.[/]",
-                border_style="#1DB894",
-                padding=(0, 2),
+        items.append(Text("✓  No vulnerabilities found", style="bold #1DB894"))
+        items.append(Text("This component passed all AVE checks.", style="dim"))
+    else:
+        items.append(Text("FINDINGS", style="bold white"))
+
+        for f in result.findings:
+            color = _sev_color(f.severity)
+            sev = _sev_value(f.severity)
+            icon = _sev_icon(f.severity)
+
+            items.append(Text(""))
+
+            # Severity + AVE ID on one line
+            items.append(
+                Text.assemble(
+                    (f"{icon}  ", ""),
+                    (sev, color),
+                    ("  ", ""),
+                    (f.ave_id or "N/A", "bold white"),
+                )
+            )
+            # Title indented below
+            items.append(Text(f"   {f.title}", style="white"))
+
+            # Location
+            if f.line:
+                loc = Text.assemble(
+                    (f"   Line {f.line}", "dim"),
+                    (f"  {f.match}" if f.match else "", "dim italic"),
+                )
+                items.append(loc)
+
+            # Engine
+            items.append(
+                Text.assemble(
+                    ("   Engine: ", "dim"),
+                    (f.engine, "dim italic"),
+                )
+            )
+
+            # OWASP
+            if f.owasp:
+                owasp_str = ", ".join(
+                    f"{code} ({OWASP_DESCRIPTIONS.get(code, code)})" for code in f.owasp
+                )
+                items.append(
+                    Text.assemble(
+                        ("   OWASP:  ", "dim"),
+                        (owasp_str, "dim"),
+                    )
+                )
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+    items.append(Text(""))
+    items.append(Text("SUMMARY", style="bold white"))
+
+    max_sev = result.max_severity
+    if max_sev:
+        color = _sev_color(max_sev)
+        items.append(
+            Text.assemble(
+                ("Risk score:   ", ""),
+                (
+                    f"{result.risk_score:.1f} / 10  {_sev_value(max_sev)}",
+                    color,
+                ),
             )
         )
     else:
-        _print_findings(result)
+        items.append(Text("Risk score:   0.0 / 10  CLEAN", style="bold #1DB894"))
 
-    _print_summary(result)
-
-    if show_report_hint and not result.is_clean:
-        console.print(
-            f"[dim]→  Run [bold]bawbel report {name}[/bold] " "for full remediation guide[/]"
+    items.append(
+        Text.assemble(
+            ("Findings:     ", ""),
+            (str(len(result.findings)), "bold"),
         )
+    )
+
+    if result.suppressed_findings:
+        n = len(result.suppressed_findings)
+        items.append(
+            Text.assemble(
+                ("Suppressed:   ", ""),
+                (
+                    f"{n}  (run with --no-ignore to see all)",
+                    "dim",
+                ),
+            )
+        )
+
+    items.append(
+        Text.assemble(
+            ("Scan time:    ", ""),
+            (f"{result.scan_time_ms}ms", "dim"),
+        )
+    )
+
+    # ── Report hint ───────────────────────────────────────────────────────────
+    if show_report_hint and not result.is_clean:
+        items.append(Text(""))
+        items.append(
+            Text.assemble(
+                ("→  Run ", "dim"),
+                (f"bawbel report {display_path}", "bold dim"),
+                (" for full remediation guide", "dim"),
+            )
+        )
+
+    return items
+
+
+def _print_scan_result(
+    result: ScanResult,
+    show_report_hint: bool = True,
+    scan_root: Path = None,
+) -> None:
+    """Print entire scan result for one file in a single outer panel."""
+    file_path = Path(result.file_path)
+    base = scan_root or Path.cwd()
+    try:
+        display_path = str(file_path.relative_to(base))
+    except ValueError:
+        display_path = str(file_path)
+
+    # Border colour = worst severity, green for clean
+    border_colors = {
+        "CRITICAL": "red",
+        "HIGH": "orange3",
+        "MEDIUM": "yellow",
+        "LOW": "cyan",
+        "INFO": "dim white",
+    }
+    max_sev = _sev_value(result.max_severity) if result.max_severity else None
+    border = border_colors.get(max_sev, "#1DB894") if max_sev else "#1DB894"
+
+    renderables = _build_scan_renderables(result, display_path, show_report_hint)
+
+    console.print(
+        Panel(
+            Group(*renderables),
+            border_style=border,
+            padding=(0, 1),
+        )
+    )
     console.print()
 
 
@@ -382,29 +519,49 @@ def _run_watch(path: str, fmt: str, fail_on_severity: str, recursive: bool) -> N
     is_flag=True,
     help="Watch for file changes and re-scan automatically",
 )
-def scan_cmd(path: str, fmt: str, fail_on_severity: str, recursive: bool, watch: bool) -> None:
+@click.option(
+    "--no-ignore",
+    is_flag=True,
+    default=False,
+    help="Ignore all bawbel-ignore suppressions — audit mode",
+)
+def scan_cmd(  # noqa: PLR0913
+    path: str,
+    fmt: str,
+    fail_on_severity: str,
+    recursive: bool,
+    watch: bool,
+    no_ignore: bool,
+) -> None:
     """Scan an agentic AI component for AVE vulnerabilities."""
 
     if watch:
         _run_watch(path, fmt, fail_on_severity, recursive)
         return
 
-    path_obj = Path(path)
+    path_obj = Path(path).resolve()
     files = _collect_files(path_obj, recursive)
 
     if not files:
         console.print("[yellow]No scannable files found.[/]")
         sys.exit(0)
 
+    # Root for computing relative display paths
+    scan_root = path_obj if path_obj.is_dir() else path_obj.parent
+
     results = []
     if fmt == "text":
         _print_banner()
 
     for f in files:
-        result = scan(str(f))
+        result = scan(str(f), no_ignore=no_ignore)
         results.append(result)
         if fmt == "text":
-            _print_scan_result(result, show_report_hint=(len(files) == 1))
+            _print_scan_result(
+                result,
+                show_report_hint=(len(files) == 1),
+                scan_root=scan_root,
+            )
 
     if fmt == "json":
         _print_json(results)
@@ -449,8 +606,11 @@ def report_cmd(path: str, fmt: str) -> None:
     name = Path(result.file_path).name
     console.print(f"[dim]Report for:[/]  [bold white]{name}[/]")
     console.print(f"[dim]Type:[/]        [bold white]{result.component_type}[/]")
-    ave_url = "https://github.com/bawbel/bawbel-ave"
-    console.print(f"[dim]AVE Standard:[/] [link={ave_url}]github.com/bawbel/bawbel-ave[/link]")
+    console.print(
+        "[dim]AVE Standard:[/] "
+        "[link=https://github.com/bawbel/bawbel-ave]"
+        "github.com/bawbel/bawbel-ave[/link]"
+    )
     console.print()
 
     if result.has_error:
@@ -491,10 +651,13 @@ def report_cmd(path: str, fmt: str) -> None:
         table.add_column("value", style="white")
 
         if f.ave_id:
-            ave_base = "https://github.com/bawbel/bawbel-ave/blob/main/records"
             table.add_row(
                 "AVE ID",
-                f"[link={ave_base}/{f.ave_id}.md]{f.ave_id}[/link]",
+                (
+                    f"[link=https://github.com/bawbel/bawbel-ave"
+                    f"/blob/main/records/{f.ave_id}.md]"
+                    f"{f.ave_id}[/link]"
+                ),
             )
         table.add_row("Rule ID", f.rule_id)
         table.add_row("CVSS-AI", f"{f.cvss_ai:.1f} / 10.0")
@@ -575,9 +738,9 @@ def version_cmd() -> None:
         )
 
     try:
-        import subprocess  # nosec B404 # noqa: S404
+        import subprocess  # nosec B404  # noqa: S404
 
-        r = subprocess.run(  # nosec B603 B607 # noqa: S603 S607
+        r = subprocess.run(  # nosec B603 B607  # noqa: S603 S607
             ["semgrep", "--version"],
             capture_output=True,
             text=True,
@@ -588,7 +751,7 @@ def version_cmd() -> None:
             console.print(f"  [bold #1DB894]✓[/]  Semgrep     " f"[dim]v{ver}  ·  active[/]")
         else:
             raise FileNotFoundError
-    except Exception:  # noqa: B014
+    except Exception:
         console.print(
             "  [dim]✗  Semgrep     not installed  ·  " 'pip install "bawbel-scanner\\[semgrep]"[/]'
         )
@@ -617,6 +780,22 @@ def version_cmd() -> None:
             "  [dim]✗  LLM         not installed  ·  " r'pip install "bawbel-scanner\[llm]"[/]'
         )
 
+    # ── Sandbox row ──────────────────────────────────────────────────────────
+    from scanner.engines.sandbox_engine import SANDBOX_ENABLED, is_docker_available
+
+    if SANDBOX_ENABLED:
+        if is_docker_available():
+            console.print(
+                "  [bold #1DB894]✓[/]  Sandbox     " "[dim]active  ·  Docker available[/]"
+            )
+        else:
+            console.print("  [dim]✗  Sandbox     Docker not running  ·  start Docker to enable[/]")
+    else:
+        console.print(
+            "  [dim]✗  Sandbox     disabled  ·  "
+            "set BAWBEL_SANDBOX_ENABLED=true to enable Stage 3[/]"
+        )
+
     console.print()
     console.print(
         "[dim]AVE Standard:  "
@@ -630,7 +809,26 @@ def version_cmd() -> None:
 
 
 def _print_json(results: list[ScanResult]) -> None:
-    """Print results as JSON."""
+    """Print results as JSON — includes suppressed findings for audit."""
+
+    def _finding_dict(f, suppressed: bool = False) -> dict:
+        d = {
+            "rule_id": f.rule_id,
+            "ave_id": f.ave_id,
+            "title": f.title,
+            "description": f.description,
+            "severity": _sev_value(f.severity),
+            "cvss_ai": f.cvss_ai,
+            "line": f.line,
+            "match": f.match,
+            "engine": f.engine,
+            "owasp": f.owasp,
+        }
+        if suppressed:
+            d["suppressed"] = True
+            d["suppression_reason"] = f.suppression_reason
+        return d
+
     output = []
     for r in results:
         output.append(
@@ -641,20 +839,9 @@ def _print_json(results: list[ScanResult]) -> None:
                 "max_severity": _sev_value(r.max_severity) if r.max_severity else None,
                 "scan_time_ms": r.scan_time_ms,
                 "has_error": r.has_error,
-                "findings": [
-                    {
-                        "rule_id": f.rule_id,
-                        "ave_id": f.ave_id,
-                        "title": f.title,
-                        "description": f.description,
-                        "severity": _sev_value(f.severity),
-                        "cvss_ai": f.cvss_ai,
-                        "line": f.line,
-                        "match": f.match,
-                        "engine": f.engine,
-                        "owasp": f.owasp,
-                    }
-                    for f in r.findings
+                "findings": [_finding_dict(f) for f in r.findings],
+                "suppressed_findings": [
+                    _finding_dict(f, suppressed=True) for f in r.suppressed_findings
                 ],
             }
         )
@@ -730,6 +917,167 @@ def _print_sarif(results: list[ScanResult]) -> None:
         ],
     }
     print(_json.dumps(sarif, indent=2))
+
+
+# ── init command ─────────────────────────────────────────────────────────────
+
+
+@cli.command("init")
+@click.option(
+    "--path",
+    "-p",
+    default=".",
+    help="Project root directory (default: current directory)",
+)
+def init_cmd(path: str) -> None:
+    """Initialise Bawbel Scanner in a project — generates .bawbelignore and bawbel.yml."""
+    _print_banner()
+    root = Path(path).resolve()
+
+    if not root.exists() or not root.is_dir():
+        console.print(f"[bold red]✗[/]  Path does not exist: {root}")
+        raise SystemExit(1)
+
+    console.print(f"[dim]Initialising Bawbel in[/] [bold white]{root}[/]")
+    console.print()
+
+    # ── Discover skill files ──────────────────────────────────────────────────
+    skill_extensions = {".md", ".yaml", ".yml", ".json", ".txt"}
+    skill_indicators = {
+        "skill.md",
+        "skills.md",
+        "system_prompt.md",
+        "system_prompt.txt",
+        "system_prompt.yaml",
+        "agent.md",
+        "assistant.md",
+        "prompt.md",
+    }
+    found_skills: list[Path] = []
+    found_mcp: list[Path] = []
+    found_docs: list[Path] = []
+
+    for p in root.rglob("*"):
+        if not p.is_file():
+            continue
+        if any(part.startswith(".") for part in p.parts):
+            continue
+        name = p.name.lower()
+        parts = {part.lower() for part in p.relative_to(root).parts}
+        doc_segments = {"docs", "doc", "examples", "example", "guides", "guide"}
+
+        if name in skill_indicators or name.endswith((".skill.md", ".skill.yaml")):
+            found_skills.append(p)
+        elif name.startswith("mcp") and p.suffix in {".json", ".yaml", ".yml"}:
+            found_mcp.append(p)
+        elif parts & doc_segments and p.suffix in skill_extensions:
+            found_docs.append(p)
+
+    # ── Report discoveries ────────────────────────────────────────────────────
+    if found_skills:
+        console.print(f"  [bold #1DB894]✓[/]  Found [bold]{len(found_skills)}[/] skill file(s):")
+        for p in found_skills[:5]:
+            console.print(f"      [dim]{p.relative_to(root)}[/]")
+        if len(found_skills) > 5:
+            console.print(f"      [dim]... and {len(found_skills) - 5} more[/]")
+
+    if found_mcp:
+        console.print(f"  [bold #1DB894]✓[/]  Found [bold]{len(found_mcp)}[/] MCP manifest(s)")
+
+    if found_docs:
+        console.print(
+            f"  [dim]ℹ[/]  Found [bold]{len(found_docs)}[/] file(s) in docs/examples "
+            "[dim](will be suppressed in .bawbelignore)[/]"
+        )
+
+    if not found_skills and not found_mcp:
+        console.print(
+            "  [yellow]⚠[/]  No skill files found. Bawbel scans any .md/.yaml file — "
+            "run [bold]bawbel scan . --recursive[/bold] to start."
+        )
+
+    console.print()
+
+    # ── Generate .bawbelignore ────────────────────────────────────────────────
+    ignore_path = root / ".bawbelignore"
+    if ignore_path.exists():
+        console.print("  [dim]·[/]  .bawbelignore already exists — skipping")
+    else:
+        ignore_lines = [
+            "# .bawbelignore — Bawbel Scanner suppression file",
+            "# Files here contain intentional examples of attack patterns.",
+            "# Run with --no-ignore to see all findings including suppressed.",
+            "",
+            "# Documentation — contains intentional examples of attack patterns",
+            "docs/**",
+            "doc/**",
+            "",
+            "# Test fixtures — intentionally malicious content",
+            "tests/fixtures/**",
+            "test/fixtures/**",
+            "",
+            "# Example files",
+            "examples/**",
+            "example/**",
+            "",
+            "# Generated files",
+            ".venv/**",
+            "node_modules/**",
+            "__pycache__/**",
+        ]
+        ignore_path.write_text("\n".join(ignore_lines) + "\n")
+        console.print(
+            f"  [bold #1DB894]✓[/]  Created [bold].bawbelignore[/] "
+            f"[dim]({len(ignore_lines)} lines)[/]"
+        )
+
+    # ── Generate bawbel.yml ───────────────────────────────────────────────────
+    config_path = root / "bawbel.yml"
+    if config_path.exists():
+        console.print("  [dim]·[/]  bawbel.yml already exists — skipping")
+    else:
+        config_lines = [
+            "# bawbel.yml — Bawbel Scanner project configuration",
+            'version: "1.0"',
+            "",
+            "scan:",
+            "  recursive: true",
+            "  fail_on_severity: high     # critical | high | medium | low",
+            "  format: text               # text | json | sarif",
+            "",
+            "confidence:",
+            "  threshold: 0.80            # findings below this are suppressed",
+            "",
+            "# Uncomment to enable Stage 3 behavioral sandbox:",
+            "# sandbox:",
+            "#   enabled: true",
+            "#   image: default           # default | local | <custom>",
+        ]
+        config_path.write_text("\n".join(config_lines) + "\n")
+        console.print(
+            f"  [bold #1DB894]✓[/]  Created [bold]bawbel.yml[/] "
+            f"[dim]({len(config_lines)} lines)[/]"
+        )
+
+    console.print()
+
+    # ── Next steps ────────────────────────────────────────────────────────────
+    total = len(found_skills) + len(found_mcp)
+    console.print(
+        Panel(
+            f"[bold #1DB894]Bawbel initialised.[/]\n\n"
+            f"[dim]Found {total} component file(s) to scan.[/]\n\n"
+            "Next steps:\n"
+            "  [bold]bawbel scan . --recursive[/bold]          "
+            "[dim]scan everything[/]\n"
+            "  [bold]bawbel scan . --recursive --format sarif[/bold]  "
+            "[dim]CI/CD output[/]\n"
+            "  [bold]bawbel scan . --no-ignore[/bold]           "
+            "[dim]audit mode — see all findings[/]",
+            border_style="#1DB894",
+            padding=(0, 1),
+        )
+    )
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

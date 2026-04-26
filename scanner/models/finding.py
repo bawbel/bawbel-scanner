@@ -63,5 +63,12 @@ class Finding:
     match: Optional[str]  # matched text — always truncated to MAX_MATCH_LENGTH
 
     # ── Classification ───────────────────────────────────────────────────────
-    engine: str  # "pattern" | "yara" | "semgrep" | "llm"
+    engine: str  # "pattern" | "yara" | "semgrep" | "llm" | "sandbox"
     owasp: list[str] = field(default_factory=list)  # ["ASI01", "ASI08"]
+
+    # ── Suppression ──────────────────────────────────────────────────────────
+    suppressed: bool = False
+    suppression_reason: Optional[str] = None
+
+    # ── Confidence (FP-3) ────────────────────────────────────────────────────
+    confidence: float = 1.0  # 0.0–1.0, scored after dedup

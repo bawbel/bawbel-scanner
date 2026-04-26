@@ -39,7 +39,24 @@ BAWBEL_MAX_FILE_SIZE_MB=50 bawbel scan ./large-skill.md
 BAWBEL_SCAN_TIMEOUT_SEC=10 bawbel scan ./skills/
 ```
 
-### Stage 2: LLM Semantic Analysis (optional)
+#
+## Stage 0 — Magika
+
+```bash
+BAWBEL_MAGIKA_ENABLED=true          # enable file type verification (default: true)
+                                    # requires: pip install "bawbel-scanner[magika]"
+```
+
+## Meta-Analyzer (FP-4)
+
+```bash
+BAWBEL_META_ANALYZER_ENABLED=true   # enable LLM-based FP filter (default: true)
+BAWBEL_META_MIN_CONFIDENCE=0.35     # lower bound for meta-analysis
+BAWBEL_META_MAX_CONFIDENCE=0.80     # upper bound — high-confidence findings skip LLM
+                                    # requires: BAWBEL_LLM_ENABLED=true + API key
+```
+
+## Stage 2: LLM Semantic Analysis (optional)
 
 Stage 2 uses [LiteLLM](https://docs.litellm.ai) — works with any LLM provider.
 Install first: `pip install "bawbel-scanner[llm]"`
@@ -83,12 +100,40 @@ export GEMINI_API_KEY=...
 bawbel scan ./skill.md
 ```
 
-### Stage 3: Behavioral Sandbox (future)
+### Stage 3: Behavioral Sandbox (optional)
+
+Stage 3 runs the component inside an isolated Docker container.
+Uses a **hybrid image strategy** — Hub cache, Hub pull, then local build fallback.
+Skips silently if Docker is not running.
 
 | Variable | Default | Description |
 |---|---|---|
-| `BAWBEL_SANDBOX_ENABLED` | `false` | Enable behavioral sandbox (v1.0) |
-| `BAWBEL_SANDBOX_TIMEOUT_SEC` | `120` | Sandbox execution timeout |
+| `BAWBEL_SANDBOX_ENABLED` | `false` | Set `true` to enable Stage 3 |
+| `BAWBEL_SANDBOX_IMAGE` | `default` | Image strategy — see below |
+| `BAWBEL_SANDBOX_TIMEOUT` | `30` | Container timeout in seconds |
+| `BAWBEL_SANDBOX_NETWORK` | `none` | `none`=isolated, `bridge`=internet |
+
+`BAWBEL_SANDBOX_IMAGE` values:
+
+| Value | Behaviour |
+|---|---|
+| `default` | Hybrid: local cache → Hub pull → local build (recommended) |
+| `local` | Skip Hub, always build from bundled Dockerfile |
+| `<image>` | Custom image — enterprise registry or dev/test |
+
+```bash
+# Enable with Docker running
+export BAWBEL_SANDBOX_ENABLED=true
+bawbel scan ./my-skill.md
+
+# Force local build (air-gapped)
+export BAWBEL_SANDBOX_IMAGE=local
+
+# Enterprise registry
+export BAWBEL_SANDBOX_IMAGE=registry.company.com/bawbel/sandbox@sha256:abc
+```
+
+See [Detection Engines Guide](engines.md) for full hybrid strategy docs, diagrams, and testing guide.
 
 ---
 
